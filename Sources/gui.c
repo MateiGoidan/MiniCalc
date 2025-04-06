@@ -2,27 +2,34 @@
 #include <X11/Xlib.h>
 #include <string.h>
 
-Button buttons[32];
+Button buttons[27];
 int button_count = 0;
 
 void init_buttons() {
   /* Initializam structura butoanelor si pozitiile lor. */
-  const char *labels[] = {
-      "C", "CE", "+/-", "(", ")",
-      "7", "8",  "9",   "/", "//",
-      "4", "5",  "6",   "*", "M+",
-      "1", "2",  "3",   "-", "MR",
-      "0", ".",  "=",   "+", "MC"
-  };
+  const char *labels[] = {"M+", "C",  "CE", "(", ")", "MR", "7",  "8",  "9",
+                          "/",  "MC", "4",  "5", "6", "*",  "//", "1",  "2",
+                          "3",  "-",  "%",  "0", ".", "=",  "+",  "+/-"};
+
   int rows = 5;
   int cols = 5;
   int btn_width = 80;
   int btn_height = 60;
   int spacing = 20;
   int start_x = 20;
-  int start_y = 150;
+  int start_y = 100;
 
-  button_count = 0;
+  // Buton de memorie pus pe acelasi rand cu ecranul
+  Button memory;
+  memory.x = 420;
+  memory.y = 20;
+  memory.width = btn_width;
+  memory.height = btn_height;
+  strncpy(memory.label, labels[0], sizeof(memory.label) - 1);
+  memory.label[sizeof(memory.label) - 1] = '\0';
+  buttons[0] = memory;
+
+  button_count = 1;
 
   for (int row = 0; row < rows; row++) {
     for (int col = 0; col < cols; col++) {
@@ -57,8 +64,7 @@ int get_button_at_position(int x, int y) {
   /* Preia butonul de pe pozitia (x, y) */
   for (int i = 0; i < button_count; i++) {
     Button b = buttons[i];
-    if (x >= b.x && x <= b.x + b.width && 
-      y >= b.y && y <= b.y + b.height) {
+    if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
       return i;
     }
   }
@@ -69,10 +75,10 @@ int get_button_at_position(int x, int y) {
 void draw_display(Display *display, Window window, GC gc, const char *text) {
   /* Desenam ecranul calculatorului */
   int x = 20, y = 40;
-  int width = 260, height = 40;
+  int width = 380, height = 60;
 
   // Dreptunghiul
-  XDrawRectangle(display, window, gc, x, y - 25, width, height);
+  XDrawRectangle(display, window, gc, x, y - 20, width, height);
 
   // Textul
   XDrawString(display, window, gc, x + 10, y, text, strlen(text));

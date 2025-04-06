@@ -2,6 +2,7 @@
 #include "../Include/logic.h"
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -45,6 +46,22 @@ int validate_parentheses(const char *expr) {
   return numb == 0;
 }
 
+int check_dot(const char *input) {
+  /* Verifica daca un numar este zecimal */
+  int i = strlen(input) - 1;
+
+  while (i >= 0 && (isdigit(input[i]) || input[i] == '.')) {
+    // Cautam punctul
+    if (input[i] == '.') {
+      // Am gasit deja un punct
+      return 1;
+    }
+    i--;
+  }
+
+  return 0;
+}
+
 int main() {
   display = XOpenDisplay(NULL); // Conectare la X server
   if (display == NULL) {
@@ -57,8 +74,19 @@ int main() {
   // Creare fereastra
   // Am folosit RootWindow deoarece lucrez cu mai multe monitoare
   window = XCreateSimpleWindow(display, RootWindow(display, screen), 100, 100,
-                               520, 560, 10, BlackPixel(display, screen),
+                               520, 500, 10, BlackPixel(display, screen),
                                WhitePixel(display, screen));
+
+  XStoreName(display, window, "MiniCalc");
+
+  XSizeHints *size_hints = XAllocSizeHints();
+
+  size_hints->flags = PMinSize;
+  size_hints->min_width = 520;
+  size_hints->min_height = 500;
+
+  XSetNormalHints(display, window, size_hints);
+  XFree(size_hints); // Nu doresc memorie pe heap de la size hints
 
   XSelectInput(display, window, ExposureMask | KeyPress | ButtonPressMask);
 
@@ -93,40 +121,56 @@ int main() {
         printf("Apăsat pe buton: %s\n", label);
       }
 
-      if (strcmp(label, "=") == 0 && validate_parentheses(input)) {
+      if (strcmp(label, "=") == 0) {
+        if (validate_parentheses(input)) {
 
-        double result = evaluate_expression(input);
+          double result = evaluate_expression(input);
 
-        snprintf(input, sizeof(input), "%.6g", result);
-
-      } else if (strcmp(label, "+/-") == 0) {
+          snprintf(input, sizeof(input), "%.6g", result);
+        }
+      } else if (!strcmp(label, "+/-")) {
         // Operatia de schimbare a semnului
         int len = strlen(input);
 
         if (len != 0) {
           // Cautam incpeutul ultimului numar
           int i = len - 1;
+
           while (i >= 0 && (isdigit(input[i]) || input[i] == '.')) {
             i--;
           }
 
           if (input[i] == '-') {
-            // Daca avem deja minus, il stergem 
-            memmove(&input[i], &input[i + 1], len - i);
+            // Daca avem deja minus
+
+            if (isdigit(input[i - 1]) || input[i - 1] == ')') {
+              // Daca se afla in interiorul expresiei
+
+              input[i] = '+';
+
+            } else {
+              // Daca se afla la inceputul expresiei
+
+              memmove(&input[i], &input[i + 1], len - i);
+            }
+
           } else {
             // Inseram minus
+
             if (len + 1 < 256) {
+
               memmove(&input[i + 2], &input[i + 1], len - i);
+
               input[i + 1] = '-';
             }
           }
         }
-      } else if (strcmp(label, "C") == 0) {
+      } else if (!strcmp(label, "C")) {
         // Operatie de stergere
 
         input[0] = '\0';
 
-      } else if (strcmp(label, "CE") == 0) {
+      } else if (!strcmp(label, "CE")) {
         // Operatie de stergere a ultimului caracter
 
         size_t len = strlen(input);
@@ -135,12 +179,12 @@ int main() {
           input[len - 1] = '\0';
         }
 
-      } else if (strcmp(label, "M+") == 0) {
+      } else if (!strcmp(label, "M+")) {
         // Operatie de salvare in memorie
 
         memory = atof(input);
 
-      } else if (strcmp(label, "MR") == 0) {
+      } else if (!strcmp(label, "MR")) {
         // Operatie de scriere din memorie
 
         char mem_str[64];
@@ -149,13 +193,66 @@ int main() {
 
         strncat(input, mem_str, sizeof(input) - strlen(input) - 1);
 
-      } else if (strcmp(label, "MC") == 0) {
+      } else if (!strcmp(label, "MC")) {
         // Operateie de stergere din memorie
 
         memory = 0.0;
 
+      } else if (!strcmp(label, "+") || !strcmp(label, "*") ||
+                 !strcmp(label, "/")) {
+
+        size_t len = strlen(input);
+
+        if (len > 0 && (input[len - 1] == '+' || input[len - 1] == '*' ||
+                        input[len - 1] == '/')) {
+
+          input[len - 1] = label[0];
+
+        } else if (len > 1 && input[len - 1] == '-') {
+
+          input[len - 1] = label[0];
+
+        } else if (len > 1 && input[len - 1] != '.' && input[len - 1] != '(') {
+
+          strncat(input, label, sizeof(input) - strlen(input) - 1);
+        }
+
+      } else if (!strcmp(label, "-") && strlen(input) > 0) {
+
+        size_t len = strlen(input);
+
+        if (input[len - 1] != '-' && input[len - 1] != '.') {
+
+          strncat(input, label, sizeof(input) - strlen(input) - 1);
+        }
+
+      } else if (!strcmp(label, "(") && strlen(input) > 0) {
+
+        size_t len = strlen(input);
+
+        if (!isdigit(input[len - 1]) && input[len - 1] != '.') {
+
+          strncat(input, label, sizeof(input) - strlen(input) - 1);
+        }
+
+      } else if (!strcmp(label, ")") && strlen(input) > 0) {
+
+        size_t len = strlen(input);
+
+        if (isdigit(input[len - 1])) {
+
+          strncat(input, label, sizeof(input) - strlen(input) - 1);
+        }
+
+      } else if (!strcmp(label, ".")) {
+
+        if (!check_dot(input)) {
+
+          strncat(input, label, sizeof(input) - strlen(input) - 1);
+        }
+
       } else {
-        // Adaugam semnul la input normal
+        // Adaugam la input
 
         strncat(input, label, sizeof(input) - strlen(input) - 1);
       }

@@ -9,7 +9,7 @@ typedef struct {
   char label[8];
 } Button;
 
-extern Button buttons[32];
+extern Button buttons[27];
 extern int button_count;
 
 void init_buttons();
