@@ -9,10 +9,10 @@ void init_buttons() {
   /* Initializam structura butoanelor si pozitiile lor. */
   const char *labels[] = {
       "C", "CE", "+/-", "(", ")",
-      "7", "8",  "9",   "/", "&",
-      "4", "5",  "6",   "*", "%",
-      "1", "2",  "3",   "-", "M-",
-      "0", ".",  "=",   "+", "M+"
+      "7", "8",  "9",   "/", "//",
+      "4", "5",  "6",   "*", "M+",
+      "1", "2",  "3",   "-", "MR",
+      "0", ".",  "=",   "+", "MC"
   };
   int rows = 5;
   int cols = 5;
