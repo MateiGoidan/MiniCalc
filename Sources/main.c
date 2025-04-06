@@ -2,6 +2,7 @@
 #include "../Include/logic.h"
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@ char input[256] = "";
 double memory = 0.0;
 
 int validate_parentheses(const char *expr) {
+  /* Verificam daca parantezele au fost inchise  */
   int numb = 0;
 
   while (*expr) {
@@ -59,6 +61,7 @@ int main() {
                                WhitePixel(display, screen));
 
   XSelectInput(display, window, ExposureMask | KeyPress | ButtonPressMask);
+
   XMapWindow(display, window); // Afisam fereastra pe ecran
 
   GraphicContext = XCreateGC(display, window, 0, NULL);
@@ -72,73 +75,98 @@ int main() {
     switch (e.type) {
     case Expose:
       // Daca parte din fereastra devine vizibila
+
       draw_display(display, window, GraphicContext, input);
+
       draw_all_buttons(display, window, GraphicContext);
+
       break;
+
     case ButtonPress: {
       // Apasare butoane
       int x = e.xbutton.x;
       int y = e.xbutton.y;
       int index = get_button_at_position(x, y);
+
       char *label = buttons[index].label;
       if (index != -1) {
         printf("Apăsat pe buton: %s\n", label);
       }
 
-      switch (label[0]) {
-      case '=': {
-        if (validate_parentheses(input)) {
+      if (strcmp(label, "=") == 0 && validate_parentheses(input)) {
 
-          double result = evaluate_expression(input);
+        double result = evaluate_expression(input);
 
-          snprintf(input, sizeof(input), "%.6g", result);
+        snprintf(input, sizeof(input), "%.6g", result);
 
-          break;
-        }
-      }
-      case 'C':
-        // Operatii de stergere
+      } else if (strcmp(label, "+/-") == 0) {
+        // Operatia de schimbare a semnului
+        int len = strlen(input);
 
-        if (!strcmp(label, "C")) {
-          input[0] = '\0';
-        } else if (!strcmp(label, "CE")) {
-          size_t len = strlen(input);
-          if (len > 0) {
-            input[len - 1] = '\0';
+        if (len != 0) {
+          // Cautam incpeutul ultimului numar
+          int i = len - 1;
+          while (i >= 0 && (isdigit(input[i]) || input[i] == '.')) {
+            i--;
+          }
+
+          if (input[i] == '-') {
+            // Daca avem deja minus, il stergem 
+            memmove(&input[i], &input[i + 1], len - i);
+          } else {
+            // Inseram minus
+            if (len + 1 < 256) {
+              memmove(&input[i + 2], &input[i + 1], len - i);
+              input[i + 1] = '-';
+            }
           }
         }
+      } else if (strcmp(label, "C") == 0) {
+        // Operatie de stergere
 
-        break;
-      case 'M':
-        // Operatii de memorie
+        input[0] = '\0';
 
-        if (!strcmp(label, "M+")) {
-          // Salvam
-          memory = atof(input); // Convertim in float
-        } else if (!strcmp(label, "MR")) {
-          // Folosim
-          char mem_str[64];
-          snprintf(mem_str, sizeof(mem_str), "%.6g", memory);
-          strncat(input, mem_str, sizeof(input) - strlen(input) - 1);
-        } else if (strcmp(label, "MC") == 0) {
-          // Stergem
-          memory = 0.0;
+      } else if (strcmp(label, "CE") == 0) {
+        // Operatie de stergere a ultimului caracter
+
+        size_t len = strlen(input);
+
+        if (len > 0) {
+          input[len - 1] = '\0';
         }
 
-        break;
+      } else if (strcmp(label, "M+") == 0) {
+        // Operatie de salvare in memorie
 
-      default:
+        memory = atof(input);
+
+      } else if (strcmp(label, "MR") == 0) {
+        // Operatie de scriere din memorie
+
+        char mem_str[64];
+
+        snprintf(mem_str, sizeof(mem_str), "%.6g", memory);
+
+        strncat(input, mem_str, sizeof(input) - strlen(input) - 1);
+
+      } else if (strcmp(label, "MC") == 0) {
+        // Operateie de stergere din memorie
+
+        memory = 0.0;
+
+      } else {
         // Adaugam semnul la input normal
 
         strncat(input, label, sizeof(input) - strlen(input) - 1);
-
-        break;
       }
 
       // Redesenare ecran
       XClearWindow(display, window);
+
       draw_display(display, window, GraphicContext, input);
+
       draw_all_buttons(display, window, GraphicContext);
+
       break;
     }
     }
