@@ -7,9 +7,9 @@ int button_count = 0;
 
 void init_buttons() {
   /* Initializam structura butoanelor si pozitiile lor. */
-  const char *labels[] = {"M+", "C",  "CE", "(", ")", "MR", "7",  "8",  "9",
-                          "/",  "MC", "4",  "5", "6", "*",  "//", "1",  "2",
-                          "3",  "-",  "%",  "0", ".", "=",  "+",  "+/-"};
+  const char *labels[] = {"M+", "C",  "CE", "(", ")", "MR", "7", "8",  "9",
+                          "/",  "MC", "4",  "5", "6", "*",  ":", "1",  "2",
+                          "3",  "-",  "%",  "0", ".", "=",  "+", "+/-"};
 
   int rows = 5;
   int cols = 5;
@@ -80,6 +80,22 @@ void draw_display(Display *display, Window window, GC gc, const char *text) {
   // Dreptunghiul
   XDrawRectangle(display, window, gc, x, y - 20, width, height);
 
-  // Textul
+  // Textul principal (negru)
+  XSetForeground(display, gc, BlackPixel(display, DefaultScreen(display)));
   XDrawString(display, window, gc, x + 10, y, text, strlen(text));
+
+  // Dacă avem mesaj de eroare
+  extern char error_msg[];
+  if (strlen(error_msg) > 0) {
+    XColor red;
+    Colormap colormap = DefaultColormap(display, 0);
+    XParseColor(display, colormap, "#FF0000", &red);
+    XAllocColor(display, colormap, &red);
+
+    XSetForeground(display, gc, red.pixel);
+    XDrawString(display, window, gc, x + 10, y + 30, error_msg,
+                strlen(error_msg));
+
+    XSetForeground(display, gc, BlackPixel(display, DefaultScreen(display)));
+  }
 }

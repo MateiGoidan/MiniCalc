@@ -22,7 +22,8 @@ Window window;
 GC GraphicContext;
 int screen;
 
-char input[256] = "";
+char input[62] = "";
+char error_msg[128] = "";
 double memory = 0.0;
 
 int validate_parentheses(const char *expr) {
@@ -81,9 +82,11 @@ int main() {
 
   XSizeHints *size_hints = XAllocSizeHints();
 
-  size_hints->flags = PMinSize;
+  size_hints->flags = PMinSize | PMaxSize;
   size_hints->min_width = 520;
+  size_hints->max_width = 520;
   size_hints->min_height = 500;
+  size_hints->max_height = 500;
 
   XSetNormalHints(display, window, size_hints);
   XFree(size_hints); // Nu doresc memorie pe heap de la size hints
@@ -123,10 +126,13 @@ int main() {
 
       if (strcmp(label, "=") == 0) {
         if (validate_parentheses(input)) {
+          strcpy(error_msg, "");
 
           double result = evaluate_expression(input);
 
-          snprintf(input, sizeof(input), "%.6g", result);
+          if (!strlen(error_msg)) {
+            snprintf(input, sizeof(input), "%.6g", result);
+          }
         }
       } else if (!strcmp(label, "+/-")) {
         // Operatia de schimbare a semnului
@@ -208,11 +214,11 @@ int main() {
 
           input[len - 1] = label[0];
 
-        } else if (len > 1 && input[len - 1] == '-') {
+        } else if (len >= 1 && input[len - 1] == '-') {
 
           input[len - 1] = label[0];
 
-        } else if (len > 1 && input[len - 1] != '.' && input[len - 1] != '(') {
+        } else if (len >= 1 && input[len - 1] != '.' && input[len - 1] != '(') {
 
           strncat(input, label, sizeof(input) - strlen(input) - 1);
         }
