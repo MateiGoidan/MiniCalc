@@ -3,6 +3,7 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <complex.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -26,6 +27,16 @@ char input[62] = "";
 char error_msg[128] = "";
 double memory = 0.0;
 
+int handle_x_error(Display *display, XErrorEvent *error) {
+  char error_text[1024];
+
+  XGetErrorText(display, error->error_code, error_text, sizeof(error_text));
+
+  fprintf(stderr, "X11 Error: %s\n", error_text);
+
+  return 0;
+}
+
 int validate_parentheses(const char *expr) {
   /* Verificam daca parantezele au fost inchise  */
   int numb = 0;
@@ -37,14 +48,15 @@ int validate_parentheses(const char *expr) {
       numb--;
     }
 
-    if (numb < 0) {
-      return 0;
-    }
-
     expr++;
   }
 
-  return numb == 0;
+  if (numb != 0) {
+    strcpy(error_msg, "Unmatched parentheses.");
+    return 0;
+  }
+
+  return 1;
 }
 
 int check_dot(const char *input) {
@@ -66,9 +78,11 @@ int check_dot(const char *input) {
 int main() {
   display = XOpenDisplay(NULL); // Conectare la X server
   if (display == NULL) {
-    fprintf(stderr, "Error: cold not open the default display!\n");
+    fprintf(stderr, "Error: Cold not open the default display!\n");
     exit(1);
   }
+
+  XSetErrorHandler(handle_x_error);
 
   screen = DefaultScreen(display); // Preluam ecranul inplicit
 
@@ -81,6 +95,11 @@ int main() {
   XStoreName(display, window, "MiniCalc");
 
   XSizeHints *size_hints = XAllocSizeHints();
+
+  if (!size_hints) {
+    fprintf(stderr, "Error: Can't allocate XSizeHints'\n");
+    exit(1);
+  }
 
   size_hints->flags = PMinSize | PMaxSize;
   size_hints->min_width = 520;
@@ -95,12 +114,18 @@ int main() {
 
   XMapWindow(display, window); // Afisam fereastra pe ecran
 
+  XSync(display, False);
+
   GraphicContext = XCreateGC(display, window, 0, NULL);
 
   init_buttons();
 
+  int run = True;
   XEvent e;
-  while (True) {
+  Atom WM_DELETE_WINDOW = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(display, window, &WM_DELETE_WINDOW, 1);
+
+  while (run) {
     XNextEvent(display, &e); // Preluam urmatorul eveniment
 
     switch (e.type) {
@@ -126,7 +151,7 @@ int main() {
 
       if (strcmp(label, "=") == 0) {
         if (validate_parentheses(input)) {
-          strcpy(error_msg, "");
+          error_msg[0] = '\0';
 
           double result = evaluate_expression(input);
 
@@ -136,6 +161,8 @@ int main() {
         }
       } else if (!strcmp(label, "+/-")) {
         // Operatia de schimbare a semnului
+        error_msg[0] = '\0';
+
         int len = strlen(input);
 
         if (len != 0) {
@@ -173,11 +200,13 @@ int main() {
         }
       } else if (!strcmp(label, "C")) {
         // Operatie de stergere
+        error_msg[0] = '\0';
 
         input[0] = '\0';
 
       } else if (!strcmp(label, "CE")) {
         // Operatie de stergere a ultimului caracter
+        error_msg[0] = '\0';
 
         size_t len = strlen(input);
 
@@ -187,30 +216,61 @@ int main() {
 
       } else if (!strcmp(label, "M+")) {
         // Operatie de salvare in memorie
+        error_msg[0] = '\0';
 
-        memory = atof(input);
+        int valid = 1;
+        int i = 0;
+
+        if (input[0] == '-') {
+          i++;
+        }
+
+        for (; input[i]; i++) {
+          if (input[i] != '.' && !isdigit(input[i])) {
+            valid = 0;
+            break;
+          }
+        }
+
+        if (valid && i > 0) {
+          memory = atof(input);
+        } else {
+          strcpy(error_msg, "Cannot store expression in memory");
+        }
 
       } else if (!strcmp(label, "MR")) {
         // Operatie de scriere din memorie
+        error_msg[0] = '\0';
 
         char mem_str[64];
 
         snprintf(mem_str, sizeof(mem_str), "%.6g", memory);
 
-        strncat(input, mem_str, sizeof(input) - strlen(input) - 1);
+        if (strlen(mem_str) + strlen(input) >= sizeof(input)) {
+
+          strcpy(error_msg, "Not enough space for memory value");
+
+        } else {
+
+          strncat(input, mem_str, sizeof(input) - strlen(input) - 1);
+        }
 
       } else if (!strcmp(label, "MC")) {
         // Operateie de stergere din memorie
+        error_msg[0] = '\0';
 
         memory = 0.0;
 
       } else if (!strcmp(label, "+") || !strcmp(label, "*") ||
-                 !strcmp(label, "/")) {
+                 !strcmp(label, "/") || !strcmp(label, ":") ||
+                 !strcmp(label, "%")) {
+        error_msg[0] = '\0';
 
         size_t len = strlen(input);
 
         if (len > 0 && (input[len - 1] == '+' || input[len - 1] == '*' ||
-                        input[len - 1] == '/')) {
+                        input[len - 1] == '/' || input[len - 1] == ':' ||
+                        input[len - 1] == '%')) {
 
           input[len - 1] = label[0];
 
@@ -224,6 +284,7 @@ int main() {
         }
 
       } else if (!strcmp(label, "-") && strlen(input) > 0) {
+        error_msg[0] = '\0';
 
         size_t len = strlen(input);
 
@@ -259,6 +320,7 @@ int main() {
 
       } else {
         // Adaugam la input
+        error_msg[0] = '\0';
 
         strncat(input, label, sizeof(input) - strlen(input) - 1);
       }
@@ -272,6 +334,12 @@ int main() {
 
       break;
     }
+    case ClientMessage:
+      if ((Atom)e.xclient.data.l[0] == WM_DELETE_WINDOW) {
+        run = False;
+      }
+
+      break;
     }
   }
 
