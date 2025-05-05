@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude -lX11 -lm
-SRC = $(wildcard Sources/*.c)
+SRC = $(wildcard src/*.c)
 OUT = ./bin/MiniCalc
 
 run: $(SRC)

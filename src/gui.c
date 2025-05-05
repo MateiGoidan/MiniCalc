@@ -1,5 +1,6 @@
-#include "../Include/gui.h"
+#include "../include/gui.h"
 #include <X11/Xlib.h>
+#include <stdio.h>
 #include <string.h>
 
 Button buttons[27];
@@ -45,23 +46,22 @@ void init_buttons() {
   }
 }
 
-void draw_button(Display *display, Window window, GC gc, Button b) {
-  /* Desenam un buton */
-  XDrawRectangle(display, window, gc, b.x, b.y, b.width, b.height);
-  int text_x = b.x + b.width / 2 - 5;
-  int text_y = b.y + b.height / 2 + 5;
-  XDrawString(display, window, gc, text_x, text_y, b.label, strlen(b.label));
-}
-
 void draw_all_buttons(Display *display, Window window, GC gc) {
   /* Desenam toate butoanele */
+
   for (int i = 0; i < button_count; i++) {
-    draw_button(display, window, gc, buttons[i]);
+    XDrawRectangle(display, window, gc, buttons[i].x, buttons[i].y,
+                   buttons[i].width, buttons[i].height);
+    int text_x = buttons[i].x + buttons[i].width / 2 - 5;
+    int text_y = buttons[i].y + buttons[i].height / 2 + 5;
+    XDrawString(display, window, gc, text_x, text_y, buttons[i].label,
+                strlen(buttons[i].label));
   }
 }
 
 int get_button_at_position(int x, int y) {
   /* Preia butonul de pe pozitia (x, y) */
+
   for (int i = 0; i < button_count; i++) {
     Button b = buttons[i];
     if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
@@ -84,13 +84,20 @@ void draw_display(Display *display, Window window, GC gc, const char *text) {
   XSetForeground(display, gc, BlackPixel(display, DefaultScreen(display)));
   XDrawString(display, window, gc, x + 10, y, text, strlen(text));
 
-  // Dacă avem mesaj de eroare
+  // Daca avem mesaj de eroare
   extern char error_msg[];
   if (strlen(error_msg) > 0) {
     XColor red;
     Colormap colormap = DefaultColormap(display, 0);
+
     XParseColor(display, colormap, "#FF0000", &red);
     XAllocColor(display, colormap, &red);
+
+    if (!XAllocColor(display, colormap, &red)) {
+
+      fprintf(stderr, "Eroare: nu s-a putut aloca culoarea roșu.\n");
+      red.pixel = BlackPixel(display, DefaultScreen(display));
+    }
 
     XSetForeground(display, gc, red.pixel);
     XDrawString(display, window, gc, x + 10, y + 30, error_msg,
