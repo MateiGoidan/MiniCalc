@@ -1,6 +1,6 @@
 # MiniCalc
 
-<img align="right" src="resources/icon.png" width="25%">
+<img align="right" src="resources/MiniCalc.jpg" width="25%">
 
 ### **Table of content**
 - [Description](#description)
