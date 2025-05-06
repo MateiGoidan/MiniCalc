@@ -3,7 +3,6 @@
 
 # Personalized ignores
 */bin/
-./bin/
 
 # Object files
 *.o
