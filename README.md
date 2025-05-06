@@ -1,7 +1,5 @@
 # MiniCalc
 
-<img align="right" src="resources/MiniCalc.jpg" width="30%">
-
 ### **Table of content**
 - [Description](#description)
 - [Project Structure](#project-structure)
@@ -57,6 +55,8 @@ make clean
 ```
 
 ## Keyboard Shortcuts
+
+<img align="right" src="resources/MiniCalc.jpg" width="48%">
 
 | Key             | Function                      |
 | --------------- | ----------------------------- |
