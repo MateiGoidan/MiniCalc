@@ -26,12 +26,12 @@ MiniCalc is a lightweight graphical calculator developed in **C** using the **Xl
 ```plaintext
 MiniCalc/
 |
-|├── include/       # Header files (gui.h, logic.h)
-|├── src/           # Source files (.c files: main.c, gui.c, logic.c)
-|├── Makefile       # Makefile for automated compilation
-|├── README.md      # Project documentation (this file)
-|├── bin/           # Folder containing the built executable
-└── MiniCalc        # Final executable
+├── include/       # Header files (gui.h, logic.h)
+├── src/           # Source files (.c files: main.c, gui.c, logic.c)
+├── Makefile       # Makefile for automated compilation
+├── README.md      # Project documentation (this file)
+├── bin/           # Folder containing the built executable
+└── MiniCalc       # Final executable
 ```
 
 ## How to Run 
